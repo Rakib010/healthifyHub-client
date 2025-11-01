@@ -25,9 +25,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { useRouter } from "next/navigation";
 import loginUser from "@/utility/login";
+import { useRouter } from "next/navigation";
 import checkAuthStatus from "@/utility/auth";
+import { UseUser } from "@/Providers/UserProvider";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -43,6 +44,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { setUser } = UseUser();
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -64,12 +66,14 @@ export default function Login() {
       if (res.success) {
         const authStatus = await checkAuthStatus();
 
+        setUser(authStatus.user); //setUser Immiditaly.
+
         if (authStatus.isAuthenticated && authStatus.user) {
           const { role } = authStatus.user;
 
           switch (role) {
             case "ADMIN":
-              router.push("/dashboard/admin");
+              router.push("/admin/dashboard");
               break;
             case "DOCTOR":
               router.push("/dashboard/doctor");
@@ -100,11 +104,10 @@ export default function Login() {
       <div className="text-center mb-4">
         <Link href="/">
           <span className="text-3xl font-bold text-primary cursor-pointer">
-            Health Care
+            PH Health Care
           </span>
         </Link>
       </div>
-
 
       <Card className="w-full max-w-md">
         <Form {...form}>
