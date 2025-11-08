@@ -1,102 +1,82 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { jwtDecode } from "jwt-decode";
-import { userInterface } from "./types/userTypes";
+import jwt, { JwtPayload } from 'jsonwebtoken';
+import { cookies } from 'next/headers';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+import { getDefaultDashboardRoute, getRouteOwner, isAuthRoute, UserRole } from './lib/auth-utils';
 
 
-
-const roleBasedRoutes = {
-    ADMIN: ["/admin/dashboard",],
-    DOCTOR: ["/doctor/dashboard"],
-    PATIENT: [
-        "/patient/dashboard",
-        "/patient/appointments",
-        "/patient/medical-records",
-    ],
-};
-
-const authRoutes = ["/login", "/register", "/forgot-password"];
-
+// This function can be marked `async` if using `await` inside
 export async function proxy(request: NextRequest) {
-    const accessToken = request.cookies.get("accessToken")?.value;
-    const refreshToken = request.cookies.get("refreshToken")?.value;
+    const cookieStore = await cookies()
+    const pathname = request.nextUrl.pathname;
 
-    const { pathname } = request.nextUrl;
+    const accessToken = request.cookies.get("accessToken")?.value || null;
 
-    if (!accessToken && !refreshToken && !authRoutes.includes(pathname)) {
-        return NextResponse.redirect(
-            new URL(`/login?redirect=${pathname}`, request.url)
-        );
-    }
-
-    let user: userInterface | null = null;
-
+    let userRole: UserRole | null = null;
     if (accessToken) {
-        try {
-            user = jwtDecode(accessToken); // {id: string, email: string, role: "ADMIN"| "DOCTOR" | "PATIENT", exp: number, iat: number}
-        } catch (err) {
-            console.log("Error decoding access token:", err);
-            return NextResponse.redirect(
-                new URL(`/login?redirect=${pathname}`, request.url)
-            );
+        const verifiedToken: JwtPayload | string = jwt.verify(accessToken, process.env.JWT_SECRET as string);
+
+        if (typeof verifiedToken === "string") {
+            cookieStore.delete("accessToken");
+            cookieStore.delete("refreshToken");
+            return NextResponse.redirect(new URL('/login', request.url));
+        }
+
+        userRole = verifiedToken.role;
+    }
+
+    const routerOwner = getRouteOwner(pathname);
+    //path = /doctor/appointments => "DOCTOR"
+    //path = /my-profile => "COMMON"
+    //path = /login => null
+
+    const isAuth = isAuthRoute(pathname)
+
+    // Rule 1 : User is logged in and trying to access auth route. Redirect to default dashboard
+    if (accessToken && isAuth) {
+        return NextResponse.redirect(new URL(getDefaultDashboardRoute(userRole as UserRole), request.url))
+    }
+
+
+    // Rule 2 : User is trying to access open public route
+    if (routerOwner === null) {
+        return NextResponse.next();
+    }
+
+    // Rule 1 & 2 for open public routes and auth routes
+
+    if (!accessToken) {
+        const loginUrl = new URL("/login", request.url);
+        loginUrl.searchParams.set("redirect", pathname);
+        return NextResponse.redirect(loginUrl);
+    }
+
+    // Rule 3 : User is trying to access common protected route
+    if (routerOwner === "COMMON") {
+        return NextResponse.next();
+    }
+
+    // Rule 4 : User is trying to access role based protected route
+    if (routerOwner === "ADMIN" || routerOwner === "DOCTOR" || routerOwner === "PATIENT") {
+        if (userRole !== routerOwner) {
+            return NextResponse.redirect(new URL(getDefaultDashboardRoute(userRole as UserRole), request.url))
         }
     }
-
-    if (!user && refreshToken) {
-        try {
-            const refreshRes = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh-token`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ refreshToken }),
-                }
-            );
-            if (refreshRes.ok) {
-                const newAccessToken = request.cookies.get("accessToken")?.value;
-                user = jwtDecode(newAccessToken!);
-                return NextResponse.next();
-            } else {
-                const response = NextResponse.redirect(
-                    new URL(`/login?redirect=${pathname}`, request.url)
-                );
-                response.cookies.delete("accessToken");
-                response.cookies.delete("refreshToken");
-                return response;
-            }
-        } catch (err) {
-            console.log("Error refreshing token:", err);
-            const response = NextResponse.redirect(
-                new URL(`/login?redirect=${pathname}`, request.url)
-            );
-            response.cookies.delete("accessToken");
-            response.cookies.delete("refreshToken");
-            return response;
-        }
-    }
-
-
-    if (user) {
-        const allowedRoutes = user ? roleBasedRoutes[user.role] : [];
-        if (allowedRoutes && allowedRoutes.some((r) => pathname.startsWith(r))) {
-            return NextResponse.next();
-        } else {
-            return NextResponse.redirect(new URL(`/unauthorized`, request.url));
-        }
-    }
-
-    if (user && authRoutes.includes(pathname)) {
-        return NextResponse.redirect(new URL(`/`));
-    }
-
-
+    console.log(userRole);
 
     return NextResponse.next();
 }
 
-// See "Matching Paths" below to learn more
+
 export const config = {
-    matcher: ["/admin/dashboard/:path*", "/login", "/register", "/forgot-password"],
-};
+    matcher: [
+        /*
+         * Match all request paths except for the ones starting with:
+         * - api (API routes)
+         * - _next/static (static files)
+         * - _next/image (image optimization files)
+         * - favicon.ico, sitemap.xml, robots.txt (metadata files)
+         */
+        '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.well-known).*)',
+    ],
+}
