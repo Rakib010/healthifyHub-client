@@ -1,7 +1,5 @@
-
-
-function patientDashboardPage() {
+function PatientDashboardPage() {
   return <div>patientDashboardPage</div>;
 }
 
-export default patientDashboardPage;
+export default PatientDashboardPage;

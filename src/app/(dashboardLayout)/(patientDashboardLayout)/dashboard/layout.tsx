@@ -1,7 +1,7 @@
 // app/dashboard/layout.tsx
 import React from "react";
 
-export default function DashboardLayout({
+export default function PatientDashboardLayout({
   children,
 }: {
   children: React.ReactNode;
