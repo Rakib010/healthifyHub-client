@@ -1,7 +1,24 @@
-import React from "react";
+import SpecialitiesManagementHeader from "@/components/modules/admin/SpecialitiesManagement/SpecialitiesManagementHeader";
+import SpecialitiesTable from "@/components/modules/admin/SpecialitiesManagement/SpecialitiesTable";
+import RefreshButton from "@/components/shared/RefreshButton";
+import { TableSkeleton } from "@/components/shared/TableSkeleton";
+import { getSpecialities } from "@/services/admin/specialitiesManagement";
+import { Suspense } from "react";
 
-function specialtiesManagementPage() {
-  return <div>specialties Management Page</div>;
-}
 
-export default specialtiesManagementPage;
+const AdminSpecialitiesManagementPage = async () => {
+  const result = await getSpecialities();
+  return (
+    <div className="space-y-6">
+      <SpecialitiesManagementHeader />
+      <div className="flex">
+        <RefreshButton />
+      </div>
+      <Suspense fallback={<TableSkeleton columns={2} rows={10} />}>
+        <SpecialitiesTable specialities={result.data} />
+      </Suspense>
+    </div>
+  );
+};
+
+export default AdminSpecialitiesManagementPage;
