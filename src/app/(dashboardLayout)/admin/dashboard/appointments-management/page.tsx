@@ -1,7 +1,10 @@
+import AppointmentsFilter from "@/components/modules/admin/AppointmentsManagement/AppointmentsFilter";
+import AppointmentsTable from "@/components/modules/admin/AppointmentsManagement/AppointmentsTable";
 import ManagementPageHeader from "@/components/shared/ManagementPageHeader";
 import TablePagination from "@/components/shared/TablePagination";
 import { TableSkeleton } from "@/components/shared/TableSkeleton";
 import { queryStringFormatter } from "@/lib/formatters";
+import { getAppointments } from "@/services/admin/appoitmentsManagement";
 
 import { Suspense } from "react";
 

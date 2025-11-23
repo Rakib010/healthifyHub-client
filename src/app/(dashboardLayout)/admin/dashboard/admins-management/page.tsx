@@ -1,6 +1,10 @@
+import AdminsFilter from "@/components/modules/admin/AdminsManagement.tsx/AdminsFilter";
+import AdminsManagementHeader from "@/components/modules/admin/AdminsManagement.tsx/AdminsManagementHeader";
+import AdminsTable from "@/components/modules/admin/AdminsManagement.tsx/AdminsTable";
 import TablePagination from "@/components/shared/TablePagination";
 import { TableSkeleton } from "@/components/shared/TableSkeleton";
 import { queryStringFormatter } from "@/lib/formatters";
+import { getAdmins } from "@/services/admin/adminsManagement";
 import { Suspense } from "react";
 
 const AdminAdminsManagementPage = async ({
