@@ -1,7 +1,37 @@
-import React from "react";
+import TablePagination from "@/components/shared/TablePagination";
+import { TableSkeleton } from "@/components/shared/TableSkeleton";
+import { queryStringFormatter } from "@/lib/formatters";
+import { Suspense } from "react";
 
-function adminManagementPage() {
-  return <div>adminManagementPage</div>;
-}
+const AdminAdminsManagementPage = async ({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) => {
+  const searchParamsObj = await searchParams;
+  const queryString = queryStringFormatter(searchParamsObj);
+  const adminsResult = await getAdmins(queryString);
 
-export default adminManagementPage;
+  const totalPages = Math.ceil(
+    (adminsResult?.meta?.total || 1) / (adminsResult?.meta?.limit || 1)
+  );
+
+  return (
+    <div className="space-y-6">
+      <AdminsManagementHeader />
+
+      {/* Search, Filters */}
+      <AdminsFilter />
+
+      <Suspense fallback={<TableSkeleton columns={8} rows={10} />}>
+        <AdminsTable admins={adminsResult?.data || []} />
+        <TablePagination
+          currentPage={adminsResult?.meta?.page || 1}
+          totalPages={totalPages || 1}
+        />
+      </Suspense>
+    </div>
+  );
+};
+
+export default AdminAdminsManagementPage;
