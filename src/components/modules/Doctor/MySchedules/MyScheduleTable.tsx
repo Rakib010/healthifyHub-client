@@ -9,7 +9,6 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { myScheduleColumns } from "./myScheduleColumns";
 
-
 interface MySchedulesTableProps {
   schedules: IDoctorSchedule[];
 }
