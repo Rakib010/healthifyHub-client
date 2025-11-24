@@ -12,7 +12,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { IDoctor } from "@/types/doctor.interface";
 import { IDoctorSchedule } from "@/types/schedule.interface";
-
+import { format } from "date-fns";
 import { Calendar, Clock } from "lucide-react";
 import { useState } from "react";
 
